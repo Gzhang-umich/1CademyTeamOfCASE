@@ -50,6 +50,13 @@ class ModelTrainer:
     def train_model(self):
         #train model
         self.trainer.train()
+        # compute evaluation results
+        metrics = self.trainer.evaluate()
+        metrics["eval_samples"] = len(self.tokenized_test_set)
+
+        # save evaluation results
+        self.trainer.log_metrics("eval", metrics)
+        self.trainer.save_metrics("eval", metrics)
 
 def main():
     parser = argparse.ArgumentParser(description = "train and evaluate PTMs")
