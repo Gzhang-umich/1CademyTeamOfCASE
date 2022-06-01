@@ -1,0 +1,13 @@
+python train_model.py \
+  -model=<model_name> \
+  -train_set=<train.csv> \
+  -dev_set=<dev.csv> \
+  -test_set=<test.csv> \
+  -num_train_epochs=5 \
+  -save_steps=50000 \
+  -per_device_train_batch_size=8 \
+  -per_device_eval_batch_size=8 \
+  -output_dir=<output_dir> \
+  -overwrite_output_dir=True \
+  -save_metrics=True \
+  -save_model=True
