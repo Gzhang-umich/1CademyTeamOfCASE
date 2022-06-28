@@ -63,7 +63,7 @@ def construct_datasets(args,tokenizer,WrapperClass):
     dataset_data1 = Dataset.from_pandas(data1)
 
     ## Dataset2: FCE
-    #data2 = pd.read_csv('datasets/CTB_forCASE_rsampled.csv')
+    #data2 = pd.read_csv('https://raw.githubusercontent.com/KiLiG-fcx/case-dataset/main/news_d.csv')
     #data2 = pd.read_csv('datasets/val_10k.csv')
     #dataset_data2 = Dataset.from_pandas(data2)
 
