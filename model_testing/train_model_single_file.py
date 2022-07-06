@@ -34,7 +34,9 @@ class ModelTrainer:
         self.args = args
         self.model = self.args.model
         self.tokenizer = AutoTokenizer.from_pretrained(self.model)
-        self.tokenized_train_set, self.tokenized_dev_set = tokenize_data(load_csv(self.args.train_set), self.tokenizer)
+        self.train_set, self.dev_set = load_csv(self.args.train_set)
+        self.tokenized_train_set = tokenize_data(self.train_set, self.tokenizer)
+        self.tokenized_dev_set = tokenize_data(self.dev_set, self.tokenizer)
         self.tokenized_test_set = tokenize_data(load_csv(self.args.test_set), self.tokenizer) if args.test_set else None
         #set training args
         self.training_args = self.get_training_args()
