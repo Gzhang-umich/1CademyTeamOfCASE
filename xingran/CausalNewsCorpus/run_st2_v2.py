@@ -58,7 +58,7 @@ from transformers.tokenization_utils_base import PreTrainedTokenizerBase
 from transformers.utils import PaddingStrategy 
 
 from eval_st2 import main as evaluate
-from model_st2 import ST2Model
+from model_st2 import ST2Model, ST2ModelV2
 # from transformers.utils import get_full_repo_name, send_example_telemetry
 # from transformers.utils.versions import require_version
 
@@ -511,7 +511,7 @@ def main():
         tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, use_fast=True)
     tokenizer.add_special_tokens({"additional_special_tokens": ["<ARG0>", "</ARG0>", "<ARG1>", "</ARG1>", "<SIG0>", "</SIG0>"]})
 
-    model = ST2Model(args)
+    model = ST2ModelV2(args)
 
     # if args.model_name_or_path:
     #     model = AutoModelForTokenClassification.from_pretrained(
@@ -608,67 +608,88 @@ def main():
             # We use this argument because the texts in our dataset are lists of words (with a label for each word).
             is_split_into_words=True,
         )
-
-        ce_labels = []
+        
+        start_positions = []
+        end_positions = []
+        # ce_labels = []
         for i, label in enumerate(examples['ce_tags']):
             word_ids = tokenized_inputs.word_ids(batch_index=i)
             previous_word_idx = None
-            label_ids = []
+            # label_ids = []
+
+            arg1_start_position = -100
+            arg1_end_position = -100
+            arg0_start_position = -100
+            arg0_end_position = -100
             for j, word_idx in enumerate(word_ids):
-                # Special tokens have a word id that is None. We set the label to -100 so they are automatically
-                # ignored in the loss function.
-                if word_idx is not None and label[word_idx] == 'B-E' and label[previous_word_idx] == 'O':
+                if word_idx is not None and label[word_idx] == 'B-E' and (previous_word_idx is None or label[previous_word_idx] == 'O'):
                     arg1_start_position = j
-                if word_idx is not None and label[word_idx] == 'O' and label[previous_word_idx] in ['I-E', 'B-E']:
+                if word_idx is not None and label[word_idx] == 'O' and (previous_word_idx is not None and label[previous_word_idx] in ['I-E', 'B-E']):
                     arg1_end_position = j - 1
 
-                if word_idx is not None and label[word_idx] == 'B-C' and label[previous_word_idx] == 'O':
+                if word_idx is not None and label[word_idx] == 'B-C' and (previous_word_idx is None or label[previous_word_idx] == 'O'):
                     arg0_start_position = j
-                if word_idx is not None and label[word_idx] == 'O' and label[previous_word_idx] in ['I-C', 'B-C']:
+                if word_idx is not None and label[word_idx] == 'O' and (previous_word_idx is not None and label[previous_word_idx] in ['I-C', 'B-C']):
                     arg0_end_position = j - 1
-                
-                if word_idx is None:
-                    label_ids.append(-100)
-                # We set the label for the first token of each word.
-                elif word_idx != previous_word_idx:
-                    label_ids.append(ce_label_to_id[label[word_idx]])
-                # For the other tokens in a word, we set the label to either the current label or -100, depending on
-                # the label_all_tokens flag.
-                else:
-                    if args.label_all_tokens:
-                        label_ids.append(ce_b_to_i_label[ce_label_to_id[label[word_idx]]])
-                    else:
-                        label_ids.append(-100)
+
+                # Special tokens have a word id that is None. We set the label to -100 so they are automatically
+                # ignored in the loss function.
+                # if word_idx is None:
+                #     label_ids.append(-100)
+                # # We set the label for the first token of each word.
+                # elif word_idx != previous_word_idx:
+                #     label_ids.append(ce_label_to_id[label[word_idx]])
+                # # For the other tokens in a word, we set the label to either the current label or -100, depending on
+                # # the label_all_tokens flag.
+                # else:
+                #     if args.label_all_tokens:
+                #         label_ids.append(ce_b_to_i_label[ce_label_to_id[label[word_idx]]])
+                #     else:
+                #         label_ids.append(-100)
                 previous_word_idx = word_idx
+            
+            start_positions.append([arg0_start_position, arg1_start_position])
+            end_positions.append([arg0_end_position, arg1_end_position])
+            # ce_labels.append(label_ids)
 
-            ce_labels.append(label_ids)
-
-        sig_labels = []
+        # sig_labels = []
         for i, label in enumerate(examples['s_tags']):
             word_ids = tokenized_inputs.word_ids(batch_index=i)
             previous_word_idx = None
-            label_ids = []
-            for word_idx in word_ids:
+            # label_ids = []
+
+            sig_start_position = -100
+            sig_end_position = -100
+            for j, word_idx in enumerate(word_ids):
+                if word_idx is not None and label[word_idx] == 'B-S' and (previous_word_idx is None or label[previous_word_idx] == 'O'):
+                    sig_start_position = j
+                if word_idx is not None and label[word_idx] == 'O' and (previous_word_idx is not None and label[previous_word_idx] in ['I-S', 'B-S']):
+                    sig_end_position = j - 1
+
                 # Special tokens have a word id that is None. We set the label to -100 so they are automatically
                 # ignored in the loss function.
-                if word_idx is None:
-                    label_ids.append(-100)
-                # We set the label for the first token of each word.
-                elif word_idx != previous_word_idx:
-                    label_ids.append(sig_label_to_id[label[word_idx]])
-                # For the other tokens in a word, we set the label to either the current label or -100, depending on
-                # the label_all_tokens flag.
-                else:
-                    if args.label_all_tokens:
-                        label_ids.append(sig_b_to_i_label[sig_label_to_id[label[word_idx]]])
-                    else:
-                        label_ids.append(-100)
+                # if word_idx is None:
+                #     label_ids.append(-100)
+                # # We set the label for the first token of each word.
+                # elif word_idx != previous_word_idx:
+                #     label_ids.append(sig_label_to_id[label[word_idx]])
+                # # For the other tokens in a word, we set the label to either the current label or -100, depending on
+                # # the label_all_tokens flag.
+                # else:
+                #     if args.label_all_tokens:
+                #         label_ids.append(sig_b_to_i_label[sig_label_to_id[label[word_idx]]])
+                #     else:
+                #         label_ids.append(-100)
                 previous_word_idx = word_idx
+            start_positions[i].append(sig_start_position)
+            end_positions[i].append(sig_end_position)
+            # sig_labels.append(label_ids)
+            
 
-            sig_labels.append(label_ids)
-
-        tokenized_inputs["ce_labels"] = ce_labels
-        tokenized_inputs["sig_labels"] = sig_labels
+        # tokenized_inputs["ce_labels"] = ce_labels
+        # tokenized_inputs["sig_labels"] = sig_labels
+        tokenized_inputs["start_positions"] = start_positions
+        tokenized_inputs["end_positions"] = end_positions
         return tokenized_inputs
 
     def tokenize(examples):
@@ -755,9 +776,12 @@ def main():
             return_tensors: str = "pt"
 
             def torch_call(self, features):
-                if "ce_labels" in features[0]:
-                    ce_labels = [feature["ce_labels"] for feature in features]
-                    sig_labels = [feature["sig_labels"] for feature in features]
+                if "start_positions" in features[0]:
+                    # ce_labels = [feature["ce_labels"] for feature in features]
+                    # sig_labels = [feature["sig_labels"] for feature in features]
+                    start_positions = [feature["start_positions"] for feature in features]
+                    end_positions = [feature["end_positions"] for feature in features]
+
 
                 word_ids = None
                 if "word_ids" in features[0]:
@@ -776,13 +800,15 @@ def main():
                 sequence_length = torch.tensor(batch["input_ids"]).shape[1]
                 assert self.tokenizer.padding_side == "right"
 
-                if "ce_labels" in features[0]:
-                    batch["ce_labels"] = [
-                        list(label) + [self.label_pad_token_id] * (sequence_length - len(label)) for label in ce_labels
-                    ]
-                    batch["sig_labels"] = [
-                        list(label) + [self.label_pad_token_id] * (sequence_length - len(label)) for label in sig_labels
-                    ]
+                if "start_positions" in features[0]:
+                    batch["start_positions"] = start_positions
+                    batch["end_positions"] = end_positions
+                #     batch["start_positions"] = [
+                #         list(label) + [self.label_pad_token_id] * (sequence_length - len(label)) for label in ce_labels
+                #     ]
+                #     batch["sig_labels"] = [
+                #         list(label) + [self.label_pad_token_id] * (sequence_length - len(label)) for label in sig_labels
+                #     ]
 
                 batch = {k: torch.tensor(v, dtype=torch.int64) for k, v in batch.items()}
                 if word_ids is not None:
@@ -986,32 +1012,61 @@ def main():
         for step, batch in enumerate(eval_dataloader):
             with torch.no_grad():
                 outputs = model(**{k: batch[k] if k in batch else None for k in ["input_ids", "attention_mask", "token_type_ids"]})
-            ce_predictions = outputs["ce_logits"].argmax(dim=-1).tolist()
-            sig_predictions = outputs["sig_logits"].argmax(dim=-1).tolist()
-            
-            for i in range(len(ce_predictions)):
+            # ce_predictions = outputs["ce_logits"].argmax(dim=-1).tolist()
+            # sig_predictions = outputs["sig_logits"].argmax(dim=-1).tolist()
+            start_cause_predictions = outputs["start_arg0_logits"]
+            end_cause_predictions = outputs["end_arg0_logits"]
+
+            start_effect_predictions = outputs["start_arg1_logits"]
+            end_effect_predictions = outputs["end_arg1_logits"]
+
+            start_signal_predictions = outputs["start_sig_logits"]
+            end_signal_predictions = outputs["end_sig_logits"]
+
+            for i in range(len(batch["input_ids"])):
                 word_ids = batch["word_ids"][i]
                 space_splitted_tokens = batch["text"][i].split()
                 tokens = tokenizer.convert_ids_to_tokens(batch["input_ids"][i])[:len(word_ids)]
-                for j, (token, id) in enumerate(zip(tokens, word_ids)):
-                    if j == 0 or j == len(tokens) - 1:
-                        continue
 
-                    if ce_id_to_label[ce_predictions[i][j]] == 'B-C':
-                        space_splitted_tokens[id] = '<ARG0>' + space_splitted_tokens[id]
-                    elif ce_id_to_label[ce_predictions[i][j]] == 'I-C' and (j == len(tokens) - 1 or ce_id_to_label[ce_predictions[i][j + 1]]) == 'O':
-                        space_splitted_tokens[id] += '</ARG0>'
-                    elif ce_id_to_label[ce_predictions[i][j]] == 'B-E':
-                        space_splitted_tokens[id] = '<ARG1>' + space_splitted_tokens[id] 
-                    elif ce_id_to_label[ce_predictions[i][j]] == 'I-E' and (j == len(tokens) - 1 or ce_id_to_label[ce_predictions[i][j + 1]] == 'O'):
-                        space_splitted_tokens[id] += '</ARG1>'
-                    
-                    if sig_id_to_label[sig_predictions[i][j]] == 'B-S':
-                        space_splitted_tokens[id] = '<SIG0>' + space_splitted_tokens[id]
-                    elif sig_id_to_label[sig_predictions[i][j]] == 'I-S' and (j == len(tokens) - 1 or sig_id_to_label[sig_predictions[i][j + 1]] == 'O'):
-                        space_splitted_tokens[id] += '</SIG0>'
+                start_cause = start_cause_predictions[i].argmax().item()
+                end_cause = end_cause_predictions[i].argmax().item()
+                start_effect = start_effect_predictions[i].argmax().item()
+                end_effect = end_effect_predictions[i].argmax().item()
+                start_signal = start_signal_predictions[i].argmax().item()
+                end_signal = end_signal_predictions[i].argmax().item()
 
+                space_splitted_tokens[word_ids[start_cause]] = '<ARG0>' + space_splitted_tokens[word_ids[start_cause]]
+                space_splitted_tokens[word_ids[end_cause]] = space_splitted_tokens[word_ids[end_cause]] + '</ARG0>'
+                space_splitted_tokens[word_ids[start_effect]] = '<ARG1>' + space_splitted_tokens[word_ids[start_effect]]
+                space_splitted_tokens[word_ids[end_effect]] = space_splitted_tokens[word_ids[end_effect]] + '</ARG1>'
+                space_splitted_tokens[word_ids[start_signal]] = '<SIG>' + space_splitted_tokens[word_ids[start_signal]]
+                space_splitted_tokens[word_ids[end_signal]] = space_splitted_tokens[word_ids[end_signal]] + '</SIG>'
+                
                 predictions.append([' '.join(space_splitted_tokens)])
+
+            # for i in range(len(ce_predictions)):
+            #     word_ids = batch["word_ids"][i]
+            #     space_splitted_tokens = batch["text"][i].split()
+            #     tokens = tokenizer.convert_ids_to_tokens(batch["input_ids"][i])[:len(word_ids)]
+            #     for j, (token, id) in enumerate(zip(tokens, word_ids)):
+            #         if j == 0 or j == len(tokens) - 1:
+            #             continue
+
+            #         if ce_id_to_label[ce_predictions[i][j]] == 'B-C':
+            #             space_splitted_tokens[id] = '<ARG0>' + space_splitted_tokens[id]
+            #         elif ce_id_to_label[ce_predictions[i][j]] == 'I-C' and (j == len(tokens) - 1 or ce_id_to_label[ce_predictions[i][j + 1]]) == 'O':
+            #             space_splitted_tokens[id] += '</ARG0>'
+            #         elif ce_id_to_label[ce_predictions[i][j]] == 'B-E':
+            #             space_splitted_tokens[id] = '<ARG1>' + space_splitted_tokens[id] 
+            #         elif ce_id_to_label[ce_predictions[i][j]] == 'I-E' and (j == len(tokens) - 1 or ce_id_to_label[ce_predictions[i][j + 1]] == 'O'):
+            #             space_splitted_tokens[id] += '</ARG1>'
+                    
+            #         if sig_id_to_label[sig_predictions[i][j]] == 'B-S':
+            #             space_splitted_tokens[id] = '<SIG0>' + space_splitted_tokens[id]
+            #         elif sig_id_to_label[sig_predictions[i][j]] == 'I-S' and (j == len(tokens) - 1 or sig_id_to_label[sig_predictions[i][j + 1]] == 'O'):
+            #             space_splitted_tokens[id] += '</SIG0>'
+
+            #     predictions.append([' '.join(space_splitted_tokens)])
 
         main_results = evaluate(truth, predictions)
 

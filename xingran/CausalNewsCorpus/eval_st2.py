@@ -215,8 +215,8 @@ def main(ref_df, pred_list, calculate_best_combi=True):
     # For examples that DO NOT require combination search
     regular_ids = list(set(range(len(preds)))-set(req_combi_ids))
 
-    ce_metric = load_metric('/data/chenxingran/CASE2022/src/CausalNewsCorpus/seqeval_metric.py')
-    sig_metric = load_metric('/data/chenxingran/CASE2022/src/CausalNewsCorpus/seqeval_metric.py')
+    ce_metric = load_metric('/data/chenxingran/CASE2022/src/1CademyTeamOfCASE/xingran/CausalNewsCorpus/seqeval_metric.py')
+    sig_metric = load_metric('/data/chenxingran/CASE2022/src/1CademyTeamOfCASE/xingran/CausalNewsCorpus/seqeval_metric.py')
 
     for i in regular_ids:
         _, ce_ref, sig_ref = refs[i]
