@@ -30,3 +30,4 @@ data/test_subtask2.csv
 data/test_subtask2_text.csv
 data/test_subtask2_grouped.csv
 checkpoints
+wandb/
