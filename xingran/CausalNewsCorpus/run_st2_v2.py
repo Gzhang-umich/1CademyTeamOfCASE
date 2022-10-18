@@ -476,7 +476,8 @@ def main():
         level=logging.INFO,
     )
     logger.info(accelerator.state, main_process_only=False)
-    wandb.init(project='case2022', entity='chenxran', config=args)
+    
+    wandb.init()
     wandb.run.log_code(".")
 
     if accelerator.is_local_main_process:

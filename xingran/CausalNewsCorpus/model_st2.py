@@ -10,9 +10,8 @@ from transformers import AutoModel, AutoTokenizer, AutoConfig, AutoModelForSeque
 class SignalDetector(nn.Module):
     def __init__(self) -> None:
         super().__init__()
-        self.tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
-        self.signal_detector = AutoModelForSequenceClassification.from_pretrained("bert-base-uncased")
-        self.signal_detector.load_state_dict(torch.load("/data/chenxingran/CASE2022/src/1CademyTeamOfCASE/xingran/CausalNewsCorpus/checkpoints/signal_detector/epoch_3/pytorch_model.bin"))
+        self.tokenizer = AutoTokenizer.from_pretrained("chenxran/case2022-signal-detector")
+        self.signal_detector = AutoModelForSequenceClassification.from_pretrained("chenxran/case2022-signal-detector")
         self.signal_detector.eval()
         self.signal_detector.cuda()
     
