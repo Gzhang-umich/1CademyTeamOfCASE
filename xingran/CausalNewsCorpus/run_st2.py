@@ -427,7 +427,7 @@ def main():
             raw_datasets = {'train': raw_datasets['train'], 'validation': raw_datasets['test']}
             raw_datasets = DatasetDict(raw_datasets)
         else:
-            raw_datasets = load_dataset(extension, data_files=data_files)['train'].train_test_split()
+            raw_datasets = load_dataset(extension, data_files=data_files)
     # Trim a number of training examples
     if args.debug:
         for split in raw_datasets.keys():
@@ -617,15 +617,15 @@ def main():
             for j, word_idx in enumerate(word_ids):
                 # Special tokens have a word id that is None. We set the label to -100 so they are automatically
                 # ignored in the loss function.
-                if word_idx is not None and label[word_idx] == 'B-E' and label[previous_word_idx] == 'O':
-                    arg1_start_position = j
-                if word_idx is not None and label[word_idx] == 'O' and label[previous_word_idx] in ['I-E', 'B-E']:
-                    arg1_end_position = j - 1
+                # if word_idx is not None and label[word_idx] == 'B-E' and label[previous_word_idx] == 'O':
+                #     arg1_start_position = j
+                # if word_idx is not None and label[word_idx] == 'O' and label[previous_word_idx] in ['I-E', 'B-E']:
+                #     arg1_end_position = j - 1
 
-                if word_idx is not None and label[word_idx] == 'B-C' and label[previous_word_idx] == 'O':
-                    arg0_start_position = j
-                if word_idx is not None and label[word_idx] == 'O' and label[previous_word_idx] in ['I-C', 'B-C']:
-                    arg0_end_position = j - 1
+                # if word_idx is not None and label[word_idx] == 'B-C' and label[previous_word_idx] == 'O':
+                #     arg0_start_position = j
+                # if word_idx is not None and label[word_idx] == 'O' and label[previous_word_idx] in ['I-C', 'B-C']:
+                #     arg0_end_position = j - 1
                 
                 if word_idx is None:
                     label_ids.append(-100)
@@ -907,7 +907,10 @@ def main():
         #     }
 
     # Train!
-    truth = pd.read_csv(args.train_file)[-300:].reset_index(drop=True)
+    if args.validation_file is None:
+        truth = pd.read_csv(args.train_file, sep=",", encoding="utf-8")[-300:].reset_index(drop=True)
+    else:
+        truth = pd.read_csv(args.validation_file, sep=",", encoding="utf-8").reset_index(drop=True)
     total_batch_size = args.per_device_train_batch_size * accelerator.num_processes * args.gradient_accumulation_steps
 
     logger.info("***** Running training *****")

@@ -1,0 +1,12 @@
+CUDA_VISIBLE_DEVICES=1 python run_st2_mlm.py \
+    --model_name_or_path albert-large-v2 \
+    --per_device_train_batch_size 8 \
+    --gradient_accumulation_steps 4 \
+    --num_train_epochs 10 \
+    --learning_rate 5e-5 \
+    --do_train \
+    --logging_strategy steps \
+    --logging_step 50 \
+    --output_dir /data/chenxingran/CASE2022/src/1CademyTeamOfCASE/xingran/CausalNewsCorpus/checkpoints/mlm \
+    --overwrite_output_dir \
+    --overwrite_cache
