@@ -476,8 +476,7 @@ def main():
         level=logging.INFO,
     )
     logger.info(accelerator.state, main_process_only=False)
-    
-    wandb.init()
+    wandb.init(config=args)
     wandb.run.log_code(".")
 
     if accelerator.is_local_main_process:
@@ -629,7 +628,7 @@ def main():
 
     if args.tapt:
         model_checkpoint = dict()
-        for k, v in torch.load("/data/chenxingran/CASE2022/src/1CademyTeamOfCASE/xingran/CausalNewsCorpus/checkpoints/mlm/pytorch_model.bin").items():
+        for k, v in torch.load("checkpoints/mlm/pytorch_model.bin").items():
             model_checkpoint[k.replace('albert.', '')] = v
         model.model.load_state_dict(model_checkpoint, strict=False)
     # if args.model_name_or_path:
@@ -716,16 +715,6 @@ def main():
     # Preprocessing the datasets.
     # First we tokenize all the texts.
     padding = "max_length" if args.pad_to_max_length else False
-
-    if args.add_signal_bias:
-        # build signal phrases lexicon to add bias to the model
-        signal_phrases = []
-        with open('/data/chenxingran/CASE2022/src/1CademyTeamOfCASE/xingran/CausalNewsCorpus/signal_phrases.txt', 'r') as f:
-            for line in f.readlines():
-                signal_phrases.append(line.strip())
-        
-        signal_phrases_ids = [tokenizer.convert_tokens_to_ids(tokenizer.tokenize(s)) for s in signal_phrases]
-
     # Tokenize all texts and align the labels with them.
 
     def tokenize_and_align_labels(examples):
@@ -1442,7 +1431,7 @@ def main():
                     predictions.append([generated_sentence_1, generated_sentence_2])
 
         # export result of every epoch to the file
-        with open(f"/data/chenxingran/CASE2022/src/1CademyTeamOfCASE/xingran/CausalNewsCorpus/checkpoints/testset-submission-{datetime.now()}.json", "w") as f:
+        with open(f"checkpoints/testset-submission-{datetime.now()}.json", "w") as f:
             for i, prediction in enumerate(predictions):
                 f.write(json.dumps({"index": i, "prediction": prediction}) + "\n")
 
